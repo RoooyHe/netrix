@@ -48,10 +48,11 @@ pub mod verification;
 pub mod utils;
 pub mod temp_storage;
 pub mod location;
+mod kanban;
 
 pub const APP_QUALIFIER: &str = "org";
 pub const APP_ORGANIZATION: &str = "robius";
-pub const APP_NAME: &str = "robrix";
+pub const APP_NAME: &str = "netrix";
 
 pub fn project_dir() -> &'static ProjectDirs {
     static ROBRIX_PROJECT_DIRS: OnceLock<ProjectDirs> = OnceLock::new();

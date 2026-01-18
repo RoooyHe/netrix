@@ -1,6 +1,11 @@
 use makepad_widgets::*;
 
-use crate::{app::AppState, home::navigation_tab_bar::{NavigationBarAction, SelectedTab}, settings::settings_screen::SettingsScreenWidgetRefExt};
+use crate::{
+    app::AppState,
+    home::navigation_tab_bar::{NavigationBarAction, SelectedTab},
+    settings::settings_screen::SettingsScreenWidgetRefExt,
+};
+use crate::kanban::KanbanActions;
 
 live_design! {
     use link::theme::*;
@@ -13,6 +18,7 @@ live_design! {
     use crate::home::search_messages::*;
     use crate::home::spaces_bar::*;
     use crate::home::add_room::*;
+    use crate::kanban::kanban_app::KanbanApp;
     use crate::shared::styles::*;
     use crate::shared::room_filter_input_bar::RoomFilterInputBar;
     use crate::home::main_desktop_ui::MainDesktopUI;
@@ -128,6 +134,20 @@ live_design! {
                         }
                     }
 
+                    kanban_page = <View> {
+                        width: Fill, height: Fill
+                        show_bg: true,
+                        draw_bg: {
+                            color: #F4F5F7
+                        },
+
+                        flow: Down,
+
+                        kanban_app = <KanbanApp> {
+                            width: Fill, height: Fill
+                        }
+                    }
+
                     add_room_page = <View> {
                         width: Fill, height: Fill
                         show_bg: true,
@@ -234,7 +254,6 @@ live_design! {
     }
 }
 
-
 /// A simple wrapper around the SpacesBar that allows us to animate showing or hiding it.
 #[derive(Live, LiveHook, Widget)]
 pub struct SpacesBarWrapper {
@@ -273,7 +292,6 @@ impl SpacesBarWrapperRef {
         inner.redraw(cx);
     }
 }
-
 
 #[derive(Live, LiveHook, Widget)]
 pub struct HomeScreen {
@@ -341,7 +359,19 @@ impl Widget for HomeScreen {
                     Some(NavigationBarAction::CloseSettings) => {
                         if matches!(app_state.selected_tab, SelectedTab::Settings) {
                             app_state.selected_tab = self.previous_selection.clone();
-                            cx.action(NavigationBarAction::TabSelected(app_state.selected_tab.clone()));
+                            cx.action(NavigationBarAction::TabSelected(
+                                app_state.selected_tab.clone(),
+                            ));
+                            self.update_active_page_from_selection(cx, app_state);
+                            self.view.redraw(cx);
+                        }
+                    }
+                    Some(NavigationBarAction::GoToKanban) => {
+                        if !matches!(app_state.selected_tab, SelectedTab::Kanban) {
+                            self.previous_selection = app_state.selected_tab.clone();
+                            app_state.selected_tab = SelectedTab::Kanban;
+                            cx.action(NavigationBarAction::TabSelected(SelectedTab::Kanban));
+                            cx.action(KanbanActions::LoadBoards);
                             self.update_active_page_from_selection(cx, app_state);
                             self.view.redraw(cx);
                         }
@@ -388,6 +418,7 @@ impl HomeScreen {
                     | SelectedTab::Home => id!(home_page),
                     SelectedTab::Settings => id!(settings_page),
                     SelectedTab::AddRoom => id!(add_room_page),
+                    SelectedTab::Kanban => id!(kanban_page),
                 },
             )
     }

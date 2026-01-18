@@ -210,6 +210,10 @@ live_design! {
         draw_icon: { svg_file: (ICON_ADD) }
     }
 
+    KanbanButton = <NavigationTabButton> {
+        draw_icon: { svg_file: (ICON_SQUARES) }
+    }
+
     Separator = <LineH> { margin: 8 }
 
     pub NavigationTabBar = {{NavigationTabBar}}<AdaptiveView> {
@@ -235,6 +239,10 @@ live_design! {
 
             <CachedWidget> {
                 add_room_button = <AddRoomButton> {}
+            }
+
+            <CachedWidget> {
+                kanban_button = <KanbanButton> {}
             }
 
             <Separator> {}
@@ -268,6 +276,10 @@ live_design! {
 
             <CachedWidget> {
                 add_room_button = <AddRoomButton> {}
+            }
+
+            <CachedWidget> {
+                kanban_button = <KanbanButton> {}
             }
 
             toggle_spaces_bar_button = <ToggleSpacesBarButton> {}
@@ -428,12 +440,14 @@ impl Widget for NavigationTabBar {
             let radio_button_set = self.view.radio_button_set(ids_array!(
                 home_button,
                 add_room_button,
+                kanban_button,
                 settings_button,
             ));
             match radio_button_set.selected(cx, actions) {
                 Some(0) => cx.action(NavigationBarAction::GoToHome),
                 Some(1) => cx.action(NavigationBarAction::GoToAddRoom),
-                Some(2) => cx.action(NavigationBarAction::OpenSettings),
+                Some(2) => cx.action(NavigationBarAction::GoToKanban),
+                Some(3) => cx.action(NavigationBarAction::OpenSettings),
                 _ => { }
             }
 
@@ -447,9 +461,21 @@ impl Widget for NavigationTabBar {
                 // update our radio buttons accordingly.
                 if let Some(NavigationBarAction::TabSelected(tab)) = action.downcast_ref() {
                     match tab {
-                        SelectedTab::Home     => self.view.radio_button(ids!(home_button)).select(cx, scope),
-                        SelectedTab::AddRoom  => self.view.radio_button(ids!(add_room_button)).select(cx, scope),
-                        SelectedTab::Settings => self.view.radio_button(ids!(settings_button)).select(cx, scope),
+                        SelectedTab::Home => {
+                            self.view.radio_button(ids!(home_button)).select(cx, scope)
+                        }
+                        SelectedTab::AddRoom => self
+                            .view
+                            .radio_button(ids!(add_room_button))
+                            .select(cx, scope),
+                        SelectedTab::Kanban => self
+                            .view
+                            .radio_button(ids!(kanban_button))
+                            .select(cx, scope),
+                        SelectedTab::Settings => self
+                            .view
+                            .radio_button(ids!(settings_button))
+                            .select(cx, scope),
                         SelectedTab::Space { .. } => {
                             for rb in radio_button_set.iter() {
                                 if let Some(mut rb_inner) = rb.borrow_mut() {
@@ -477,6 +503,7 @@ pub enum SelectedTab {
     Home,
     AddRoom,
     Settings,
+    Kanban,
     // AlertsInbox,
     Space { space_name_id: RoomNameId },
 }
@@ -522,6 +549,8 @@ pub enum NavigationBarAction {
     CloseSettings,
     /// Go the space screen for the given space.
     GoToSpace { space_name_id: RoomNameId },
+    /// Go to Kanban board view.
+    GoToKanban,
 
     // TODO: add GoToAlertsInbox, once we add that button/screen
 

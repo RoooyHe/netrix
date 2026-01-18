@@ -22,6 +22,7 @@ live_design! {
     pub ICON_IMPORT          = dep("crate://self/resources/icons/import.svg") // TODO: FIX
     pub ICON_HIERARCHY       = dep("crate://self/resources/icons/hierarchy.svg")
     pub ICON_HOME            = dep("crate://self/resources/icons/home.svg")
+    pub ICON_KANBAN          = dep("crate://self/resources/icons/kanban.svg")
     pub ICON_HTML_FILE       = dep("crate://self/resources/icons/html_file.svg")
     pub ICON_INFO            = dep("crate://self/resources/icons/info.svg")
     pub ICON_INVITE          = dep("crate://self/resources/icons/invite.svg")
