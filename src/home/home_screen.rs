@@ -2,10 +2,16 @@ use makepad_widgets::*;
 
 use crate::{
     app::AppState,
-    home::navigation_tab_bar::{NavigationBarAction, SelectedTab},
+    home::{
+        kanban_card::KanbanCardAction,
+        kanban_card_detail::KanbanCardDetailWidgetExt,
+        kanban_list_view::KanbanCardSummary,
+        navigation_tab_bar::{NavigationBarAction, SelectedTab},
+    },
+    kanban::KanbanActions,
     settings::settings_screen::SettingsScreenWidgetRefExt,
 };
-use crate::kanban::KanbanActions;
+use crate::home::kanban_list_view::KanbanListViewWidgetExt;
 
 live_design! {
     use link::theme::*;
@@ -18,17 +24,19 @@ live_design! {
     use crate::home::search_messages::*;
     use crate::home::spaces_bar::*;
     use crate::home::add_room::*;
-    use crate::kanban::kanban_app::KanbanApp;
+    use crate::home::kanban_list_view::KanbanListView;
+    use crate::home::kanban_card::KanbanCard;
+    use crate::home::kanban_card_detail::KanbanCardDetail;
     use crate::shared::styles::*;
     use crate::shared::room_filter_input_bar::RoomFilterInputBar;
     use crate::home::main_desktop_ui::MainDesktopUI;
     use crate::settings::settings_screen::SettingsScreen;
 
+
     StackNavigationWrapper = {{StackNavigationWrapper}} {
         view_stack = <StackNavigation> {}
     }
 
-    // A wrapper view around the SpacesBar that lets us show/hide it via animation.
     SpacesBarWrapper = {{SpacesBarWrapper}}<RoundedShadowView> {
         width: Fill,
         height: (NAVIGATION_TAB_BAR_SIZE)
@@ -36,11 +44,10 @@ live_design! {
         show_bg: true
         draw_bg: {
             color: (COLOR_PRIMARY_DARKER),
-            border_radius: 4.0,
             border_size: 0.0
             shadow_color: #0005
             shadow_radius: 15.0
-            shadow_offset: vec2(1.0, 0.0), //5.0,5.0)
+            shadow_offset: vec2(1.0, 0.0)
         }
 
         <CachedWidget> {
@@ -62,15 +69,8 @@ live_design! {
         }
     }
 
-    // The home screen widget contains the main content:
-    // rooms list, room screens, and the settings screen as an overlay.
-    // It adapts to both desktop and mobile layouts.
     pub HomeScreen = {{HomeScreen}} {
         <AdaptiveView> {
-            // NOTE: within each of these sub views, we used `CachedWidget` wrappers
-            //       to ensure that there is only a single global instance of each
-            //       of those widgets, which means they maintain their state
-            //       across transitions between the Desktop and Mobile variant.
             Desktop = {
                 show_bg: true
                 draw_bg: {
@@ -82,13 +82,10 @@ live_design! {
                 padding: 0,
                 margin: 0,
 
-                // On the left, show the navigation tab bar vertically.
                 <CachedWidget> {
                     navigation_tab_bar = <NavigationTabBar> {}
                 }
 
-                // To the right of that, we use the PageFlip widget to show either
-                // the main desktop UI or the settings screen.
                 home_screen_page_flip = <PageFlip> {
                     width: Fill, height: Fill
 
@@ -98,28 +95,6 @@ live_design! {
                     home_page = <View> {
                         width: Fill, height: Fill
                         flow: Down
-
-                        <View> {
-                            width: Fill,
-                            height: 39,
-                            flow: Right
-                            padding: {top: 2, bottom: 2}
-                            margin: {right: 2}
-                            spacing: 2
-                            align: {y: 0.5}
-
-                            <CachedWidget> {
-                                room_filter_input_bar = <RoomFilterInputBar> {}
-                            }
-
-                            search_messages_button = <SearchMessagesButton> {
-                                // make this button match/align with the RoomFilterInputBar
-                                height: 32.5,
-                                margin: {right: 2}
-                            }
-                        }
-
-                        <MainDesktopUI> {}
                     }
 
                     settings_page = <View> {
@@ -136,15 +111,47 @@ live_design! {
 
                     kanban_page = <View> {
                         width: Fill, height: Fill
+                        flow: Right
                         show_bg: true,
                         draw_bg: {
                             color: #F4F5F7
-                        },
+                        }
 
-                        flow: Down,
+                        kanban_lists_container = <View> {
+                            flow: Right,
+                            padding: 20,
+                            spacing: 16,
 
-                        kanban_app = <KanbanApp> {
+                            kanban_list_todo = <KanbanListView> {
+                                width: 280, height: Fill,
+                            }
+
+                            kanban_list_doing = <KanbanListView> {
+                                width: 280, height: Fill,
+                            }
+
+                            kanban_list_done = <KanbanListView> {
+                                width: 280, height: Fill,
+                            }
+                        }
+
+                        kanban_detail_panel = <View> {
                             width: Fill, height: Fill
+                            padding: 20
+                            flow: Down
+                            show_bg: true
+                            draw_bg: { color: #F4F5F7 }
+
+                            detail_empty = <Label> {
+                                width: Fill, height: Fit
+                                text: "chose one card to detail"
+                                draw_text: {
+                                    text_style: <THEME_FONT_REGULAR>{font_size: 14}
+                                    color: #5E6C84
+                                }
+                            }
+
+                            card_detail_panel_inner = <KanbanCardDetail> { visible: false }
                         }
                     }
 
@@ -179,8 +186,6 @@ live_design! {
                             flow: Down
                             width: Fill, height: Fill
 
-                            // At the top of the root view, we use the PageFlip widget to show either
-                            // the main list of rooms or the settings screen.
                             home_screen_page_flip = <PageFlip> {
                                 width: Fill, height: Fill
 
@@ -211,17 +216,10 @@ live_design! {
                                 }
                             }
 
-                            // Show the SpacesBar right above the navigation tab bar.
-                            // We wrap it in the SpacesBarWrapper in order to animate it in or out,
-                            // and wrap *that* in a CachedWidget in order to maintain its shown/hidden state
-                            // across AdaptiveView transitions between Mobile view mode and Desktop view mode.
-                            // 
-                            // ... Then we wrap *that* in a ... <https://www.youtube.com/watch?v=evUWersr7pc>
                             <CachedWidget> {
                                 spaces_bar_wrapper = <SpacesBarWrapper> {}
                             }
 
-                            // At the bottom of the root view, show the navigation tab bar horizontally.
                             <CachedWidget> {
                                 navigation_tab_bar = <NavigationTabBar> {}
                             }
@@ -230,7 +228,7 @@ live_design! {
                         main_content_view = <StackNavigationView> {
                             width: Fill, height: Fill
                             header = {
-                                content = {
+                                content: {
                                     button_container = {
                                         padding: {left: 14}
                                     }
@@ -243,7 +241,7 @@ live_design! {
                                     }
                                 }
                             }
-                            body = {
+                            body: {
                                 main_content = <MainMobileUI> {}
                             }
                         }
@@ -257,8 +255,10 @@ live_design! {
 /// A simple wrapper around the SpacesBar that allows us to animate showing or hiding it.
 #[derive(Live, LiveHook, Widget)]
 pub struct SpacesBarWrapper {
-    #[deref] view: View,
-    #[animator] animator: Animator,
+    #[deref]
+    view: View,
+    #[animator]
+    animator: Animator,
 }
 
 impl Widget for SpacesBarWrapper {
@@ -283,7 +283,9 @@ impl Widget for SpacesBarWrapper {
 impl SpacesBarWrapperRef {
     /// Shows or hides the spaces bar by animating it in or out.
     fn show_or_hide(&self, cx: &mut Cx, show: bool) {
-        let Some(mut inner) = self.borrow_mut() else { return };
+        let Some(mut inner) = self.borrow_mut() else {
+            return;
+        };
         if show {
             inner.animator_play(cx, ids!(spaces_bar_animator.show));
         } else {
@@ -295,15 +297,22 @@ impl SpacesBarWrapperRef {
 
 #[derive(Live, LiveHook, Widget)]
 pub struct HomeScreen {
-    #[deref] view: View,
+    #[deref]
+    view: View,
 
     /// The previously-selected navigation tab, used to determine which tab
     /// and top-level view we return to after closing the settings screen.
     ///
     /// Note that the current selected tap is stored in `AppState` so that
     /// other widgets can easily access it.
-    #[rust] previous_selection: SelectedTab,
-    #[rust] is_spaces_bar_shown: bool,
+    #[rust]
+    previous_selection: SelectedTab,
+    #[rust]
+    is_spaces_bar_shown: bool,
+    #[rust]
+    selected_kanban_card_id: Option<String>,
+    #[rust]
+    is_kanban_card_detail_open: bool,
 }
 
 impl Widget for HomeScreen {
@@ -311,79 +320,108 @@ impl Widget for HomeScreen {
         if let Event::Actions(actions) = event {
             let app_state = scope.data.get_mut::<AppState>().unwrap();
             for action in actions {
-                match action.downcast_ref() {
-                    Some(NavigationBarAction::GoToHome) => {
-                        if !matches!(app_state.selected_tab, SelectedTab::Home) {
-                            self.previous_selection = app_state.selected_tab.clone();
-                            app_state.selected_tab = SelectedTab::Home;
-                            cx.action(NavigationBarAction::TabSelected(app_state.selected_tab.clone()));
-                            self.update_active_page_from_selection(cx, app_state);
-                            self.view.redraw(cx);
-                        }
-                    }
-                    Some(NavigationBarAction::GoToAddRoom) => {
-                        if !matches!(app_state.selected_tab, SelectedTab::AddRoom) {
-                            self.previous_selection = app_state.selected_tab.clone();
-                            app_state.selected_tab = SelectedTab::AddRoom;
-                            cx.action(NavigationBarAction::TabSelected(app_state.selected_tab.clone()));
-                            self.update_active_page_from_selection(cx, app_state);
-                            self.view.redraw(cx);
-                        }
-                    }
-                    Some(NavigationBarAction::GoToSpace { space_name_id }) => {
-                        let new_space_selection = SelectedTab::Space { space_name_id: space_name_id.clone() };
-                        if app_state.selected_tab != new_space_selection {
-                            self.previous_selection = app_state.selected_tab.clone();
-                            app_state.selected_tab = new_space_selection;
-                            cx.action(NavigationBarAction::TabSelected(app_state.selected_tab.clone()));
-                            self.update_active_page_from_selection(cx, app_state);
-                            self.view.redraw(cx);
-                        }
-                    }
-                    // Only open the settings screen if it is not currently open.
-                    Some(NavigationBarAction::OpenSettings) => {
-                        if !matches!(app_state.selected_tab, SelectedTab::Settings) {
-                            self.previous_selection = app_state.selected_tab.clone();
-                            app_state.selected_tab = SelectedTab::Settings;
-                            cx.action(NavigationBarAction::TabSelected(app_state.selected_tab.clone()));
-                            if let Some(settings_page) = self.update_active_page_from_selection(cx, app_state) {
-                                settings_page
-                                    .settings_screen(ids!(settings_screen))
-                                    .populate(cx, None);
+                if let Some(nav_action) = action.downcast_ref::<NavigationBarAction>() {
+                    match nav_action {
+                        NavigationBarAction::GoToHome => {
+                            if !matches!(app_state.selected_tab, SelectedTab::Home) {
+                                self.previous_selection = app_state.selected_tab.clone();
+                                app_state.selected_tab = SelectedTab::Home;
+                                cx.action(NavigationBarAction::TabSelected(
+                                    app_state.selected_tab.clone(),
+                                ));
+                                self.update_active_page_from_selection(cx, app_state);
                                 self.view.redraw(cx);
-                            } else {
-                                error!("BUG: failed to set active page to show settings screen.");
                             }
                         }
+                        NavigationBarAction::GoToAddRoom => {
+                            if !matches!(app_state.selected_tab, SelectedTab::AddRoom) {
+                                self.previous_selection = app_state.selected_tab.clone();
+                                app_state.selected_tab = SelectedTab::AddRoom;
+                                cx.action(NavigationBarAction::TabSelected(
+                                    app_state.selected_tab.clone(),
+                                ));
+                                self.update_active_page_from_selection(cx, app_state);
+                                self.view.redraw(cx);
+                            }
+                        }
+                        NavigationBarAction::GoToSpace { space_name_id } => {
+                            let new_space_selection = SelectedTab::Space {
+                                space_name_id: space_name_id.clone(),
+                            };
+                            if app_state.selected_tab != new_space_selection {
+                                self.previous_selection = app_state.selected_tab.clone();
+                                app_state.selected_tab = new_space_selection;
+                                cx.action(NavigationBarAction::TabSelected(
+                                    app_state.selected_tab.clone(),
+                                ));
+                                self.update_active_page_from_selection(cx, app_state);
+                                self.view.redraw(cx);
+                            }
+                        }
+                        // Only open the settings screen if it is not currently open.
+                        NavigationBarAction::OpenSettings => {
+                            if !matches!(app_state.selected_tab, SelectedTab::Settings) {
+                                self.previous_selection = app_state.selected_tab.clone();
+                                app_state.selected_tab = SelectedTab::Settings;
+                                cx.action(NavigationBarAction::TabSelected(
+                                    app_state.selected_tab.clone(),
+                                ));
+                                if let Some(settings_page) =
+                                    self.update_active_page_from_selection(cx, app_state)
+                                {
+                                    settings_page
+                                        .settings_screen(ids!(settings_screen))
+                                        .populate(cx, None);
+                                    self.view.redraw(cx);
+                                } else {
+                                    error!(
+                                        "BUG: failed to set active page to show settings screen."
+                                    );
+                                }
+                            }
+                        }
+                        NavigationBarAction::CloseSettings => {
+                            if matches!(app_state.selected_tab, SelectedTab::Settings) {
+                                app_state.selected_tab = self.previous_selection.clone();
+                                cx.action(NavigationBarAction::TabSelected(
+                                    app_state.selected_tab.clone(),
+                                ));
+                                self.update_active_page_from_selection(cx, app_state);
+                                self.view.redraw(cx);
+                            }
+                        }
+                        NavigationBarAction::GoToKanban => {
+                            if !matches!(app_state.selected_tab, SelectedTab::Kanban) {
+                                self.previous_selection = app_state.selected_tab.clone();
+                                app_state.selected_tab = SelectedTab::Kanban;
+                                cx.action(NavigationBarAction::TabSelected(SelectedTab::Kanban));
+                                cx.action(KanbanActions::LoadBoards);
+                                self.update_active_page_from_selection(cx, app_state);
+                                self.view.redraw(cx);
+                            }
+                        }
+                        NavigationBarAction::ToggleSpacesBar => {
+                            self.is_spaces_bar_shown = !self.is_spaces_bar_shown;
+                            self.view
+                                .spaces_bar_wrapper(ids!(spaces_bar_wrapper))
+                                .show_or_hide(cx, self.is_spaces_bar_shown);
+                        }
+                        NavigationBarAction::TabSelected(_) => {}
                     }
-                    Some(NavigationBarAction::CloseSettings) => {
-                        if matches!(app_state.selected_tab, SelectedTab::Settings) {
-                            app_state.selected_tab = self.previous_selection.clone();
-                            cx.action(NavigationBarAction::TabSelected(
-                                app_state.selected_tab.clone(),
-                            ));
-                            self.update_active_page_from_selection(cx, app_state);
+                }
+
+                if let Some(card_action) = action.downcast_ref::<KanbanCardAction>() {
+                    log!("HomeScreen received KanbanCardAction: {:?}", card_action);
+                    match card_action {
+                        KanbanCardAction::Clicked { card_id } => {
+                            log!("Opening modal for card: {}", card_id);
+                            self.selected_kanban_card_id = Some(card_id.clone());
+                            self.is_kanban_card_detail_open = true;
+                            self.sync_card_detail_panel(cx, app_state);
                             self.view.redraw(cx);
                         }
+                        KanbanCardAction::None => {}
                     }
-                    Some(NavigationBarAction::GoToKanban) => {
-                        if !matches!(app_state.selected_tab, SelectedTab::Kanban) {
-                            self.previous_selection = app_state.selected_tab.clone();
-                            app_state.selected_tab = SelectedTab::Kanban;
-                            cx.action(NavigationBarAction::TabSelected(SelectedTab::Kanban));
-                            cx.action(KanbanActions::LoadBoards);
-                            self.update_active_page_from_selection(cx, app_state);
-                            self.view.redraw(cx);
-                        }
-                    }
-                    Some(NavigationBarAction::ToggleSpacesBar) => {
-                        self.is_spaces_bar_shown = !self.is_spaces_bar_shown;
-                        self.view.spaces_bar_wrapper(ids!(spaces_bar_wrapper))
-                            .show_or_hide(cx, self.is_spaces_bar_shown);
-                    }
-                    // We're the ones who emitted this action, so we don't need to handle it again.
-                    Some(NavigationBarAction::TabSelected(_))
-                    | None => { }
                 }
             }
         }
@@ -398,8 +436,94 @@ impl Widget for HomeScreen {
         // the PageFlip widget will have been reset to its default,
         // so we must re-set it to the correct page based on `app_state.selected_tab`.
         self.update_active_page_from_selection(cx, app_state);
+        if matches!(app_state.selected_tab, SelectedTab::Kanban) {
+            self.sync_kanban_lists(cx, app_state);
+            self.sync_card_detail_panel(cx, app_state);
+        }
 
         self.view.draw_walk(cx, scope, walk)
+    }
+}
+
+impl HomeScreen {
+    fn sync_kanban_lists(&mut self, cx: &mut Cx, app_state: &AppState) {
+        let list_views = [
+            self.view
+                .kanban_list_view(ids!(kanban_page.kanban_lists_container.kanban_list_todo)),
+            self.view
+                .kanban_list_view(ids!(kanban_page.kanban_lists_container.kanban_list_doing)),
+            self.view
+                .kanban_list_view(ids!(kanban_page.kanban_lists_container.kanban_list_done)),
+        ];
+        let lists = app_state.kanban_state.current_board_lists();
+        let selected_card_id = self.selected_kanban_card_id.as_deref();
+
+        for (list_index, list_view) in list_views.iter().enumerate() {
+            if let Some(list) = lists.get(list_index) {
+                let cards = app_state
+                    .kanban_state
+                    .list_cards(&list.id)
+                    .iter()
+                    .map(|card| KanbanCardSummary {
+                        id: card.id.clone(),
+                        title: card.title.clone(),
+                    })
+                    .collect::<Vec<_>>();
+
+                list_view.set_visible(cx, true);
+                list_view.set_list(cx, &list.name, &cards, selected_card_id);
+            } else {
+                list_view.set_visible(cx, false);
+            }
+        }
+    }
+
+    fn sync_card_detail_panel(&mut self, cx: &mut Cx, app_state: &AppState) {
+        let detail_empty = self
+            .view
+            .label(ids!(kanban_page.kanban_detail_panel.detail_empty));
+        let detail_panel = self.view.kanban_card_detail(ids!(
+            kanban_page.kanban_detail_panel.card_detail_panel_inner
+        ));
+        if self.is_kanban_card_detail_open {
+            if let Some(card_id) = self.selected_kanban_card_id.as_deref() {
+                if let Some(card) = app_state.kanban_state.cards.get(card_id) {
+                    let list_name = app_state
+                        .kanban_state
+                        .lists
+                        .get(&card.list_id)
+                        .map(|list| list.name.as_str())
+                        .unwrap_or("Will Do");
+                    let description = card
+                        .description
+                        .as_deref()
+                        .unwrap_or("This is a card detail");
+                    let due_date = card
+                        .due_date
+                        .as_ref()
+                        .map(|due| due.date.as_str())
+                        .unwrap_or("2026.1.25");
+                    let checklist_text = if card.checklists.is_empty() {
+                        "0/0 success"
+                    } else {
+                        "2/4 success"
+                    };
+                    detail_empty.set_visible(cx, false);
+                    detail_panel.set_visible(cx, true);
+                    detail_panel.set_detail(
+                        cx,
+                        &card.title,
+                        list_name,
+                        description,
+                        due_date,
+                        checklist_text,
+                    );
+                    return;
+                }
+            }
+        }
+        detail_panel.set_visible(cx, false);
+        detail_empty.set_visible(cx, true);
     }
 }
 
@@ -414,8 +538,7 @@ impl HomeScreen {
             .set_active_page(
                 cx,
                 match app_state.selected_tab {
-                    SelectedTab::Space { .. }
-                    | SelectedTab::Home => id!(home_page),
+                    SelectedTab::Space { .. } | SelectedTab::Home => id!(home_page),
                     SelectedTab::Settings => id!(settings_page),
                     SelectedTab::AddRoom => id!(add_room_page),
                     SelectedTab::Kanban => id!(kanban_page),
@@ -428,7 +551,8 @@ impl HomeScreen {
 /// that simply forwards stack view actions to it.
 #[derive(Live, LiveHook, Widget)]
 pub struct StackNavigationWrapper {
-    #[deref] view: View,
+    #[deref]
+    view: View,
 }
 
 impl Widget for StackNavigationWrapper {

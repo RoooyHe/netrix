@@ -1,30 +1,43 @@
 use serde::{Deserialize, Serialize};
 use matrix_sdk::ruma::{OwnedRoomId, OwnedUserId};
 
+/// 看板数据模型
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KanbanBoard {
+    /// 看板 ID (对应 Matrix Room ID)
     pub id: OwnedRoomId,
 
+    /// 看板名称
     pub name: String,
 
+    /// 看板描述
     pub description: Option<String>,
 
+    /// 背景颜色
     pub background_color: String,
 
+    /// 背景图片 URL
     pub background_image: Option<String>,
 
+    /// 标签列表
     pub labels: Vec<KanbanLabel>,
 
+    /// 成员 ID 列表
     pub member_ids: Vec<OwnedUserId>,
 
+    /// 列表 ID 列表 (按顺序)
     pub list_ids: Vec<String>,
 
+    /// 是否已归档
     pub is_archived: bool,
 
+    /// 创建时间
     pub created_at: String,
 
+    /// 更新时间
     pub updated_at: String,
 
+    /// 扩展数据 (本地存储)
     pub extensions: BoardExtensions,
 }
 
@@ -48,6 +61,7 @@ impl Default for KanbanBoard {
 }
 
 impl KanbanBoard {
+    /// 创建新看板
     pub fn new(name: &str) -> Self {
         Self {
             name: name.to_string(),
@@ -57,24 +71,31 @@ impl KanbanBoard {
         }
     }
 
+    /// 获取成员数量
     pub fn member_count(&self) -> usize {
         self.member_ids.len()
     }
 
+    /// 获取列表数量
     pub fn list_count(&self) -> usize {
         self.list_ids.len()
     }
 }
 
+/// 看板标签
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KanbanLabel {
+    /// 标签 ID
     pub id: String,
 
+    /// 标签名称
     pub name: String,
 
+    /// 标签颜色
     pub color: LabelColor,
 }
 
+/// 标签颜色
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum LabelColor {
     Green,
@@ -106,21 +127,25 @@ impl LabelColor {
     }
 }
 
+/// 看板扩展数据 (仅本地存储)
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct BoardExtensions {
+    /// 视图设置
     pub view_settings: ViewSettings,
-
+    /// 过滤状态
     pub filter_state: Option<KanbanFilterState>,
-
+    /// 排序状态
     pub sort_state: Option<KanbanSortState>,
 }
 
+/// 视图设置
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ViewSettings {
+    /// 卡片显示方式
     pub card_view_mode: CardViewMode,
-
+    /// 显示已完成卡片
     pub show_completed: bool,
-
+    /// 每页卡片数
     pub page_size: u32,
 }
 
@@ -134,29 +159,39 @@ impl Default for ViewSettings {
     }
 }
 
+/// 卡片视图模式
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum CardViewMode {
-    Compact,
-    Detailed,
-    Cover,
+    Compact,  // 紧凑模式
+    Detailed, // 详细模式
+    Cover,    // 封面模式
 }
 
+/// 看板列表数据模型
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KanbanList {
+    /// 列表 ID
     pub id: String,
 
+    /// 列表名称
     pub name: String,
 
+    /// 看板 ID
     pub board_id: OwnedRoomId,
 
+    /// 排序位置
     pub position: f64,
 
+    /// 是否已归档
     pub is_archived: bool,
 
+    /// 卡片 ID 列表 (按顺序)
     pub card_ids: Vec<String>,
 
+    /// 创建时间
     pub created_at: String,
 
+    /// 更新时间
     pub updated_at: String,
 }
 
@@ -192,40 +227,58 @@ impl KanbanList {
     }
 }
 
+/// 看板卡片数据模型
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KanbanCard {
+    /// 卡片 ID
     pub id: String,
 
+    /// 卡片标题
     pub title: String,
 
+    /// 卡片描述
     pub description: Option<String>,
 
+    /// 所属列表 ID
     pub list_id: String,
 
+    /// 所属看板 ID
     pub board_id: OwnedRoomId,
 
+    /// 排序位置
     pub position: f64,
 
+    /// 标签 ID 列表
     pub label_ids: Vec<String>,
 
+    /// 成员 ID 列表
     pub member_ids: Vec<OwnedUserId>,
 
+    /// 截止日期
     pub due_date: Option<CardDueDate>,
 
+    /// 封面图片
     pub cover: Option<CardCover>,
 
+    /// 附件数量
     pub attachment_count: u32,
 
+    /// 评论数量
     pub comment_count: u32,
 
+    /// 检查清单
     pub checklists: Vec<CardChecklist>,
 
+    /// 是否已加星
     pub is_starred: bool,
 
+    /// 是否已归档
     pub is_archived: bool,
 
+    /// 创建时间
     pub created_at: String,
 
+    /// 更新时间
     pub updated_at: String,
 }
 
@@ -271,18 +324,21 @@ impl KanbanCard {
     }
 }
 
+/// 卡片截止日期
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CardDueDate {
     pub date: String,
     pub is_completed: bool,
 }
 
+/// 卡片封面
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CardCover {
     pub url: String,
     pub height: u32,
 }
 
+/// 卡片检查清单
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CardChecklist {
     pub id: String,
@@ -300,6 +356,7 @@ impl CardChecklist {
     }
 }
 
+/// 检查清单项目
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChecklistItem {
     pub id: String,
@@ -307,6 +364,7 @@ pub struct ChecklistItem {
     pub is_checked: bool,
 }
 
+/// 看板过滤状态
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KanbanFilterState {
     pub keyword: Option<String>,
@@ -315,6 +373,7 @@ pub struct KanbanFilterState {
     pub due_date: Option<DueDateFilter>,
 }
 
+/// 截止日期过滤
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DueDateFilter {
     Overdue,
@@ -326,12 +385,14 @@ pub enum DueDateFilter {
     Completed,
 }
 
+/// 看板排序状态
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KanbanSortState {
     pub field: SortField,
     pub direction: SortDirection,
 }
 
+/// 排序字段
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum SortField {
     Position,
@@ -341,6 +402,7 @@ pub enum SortField {
     DueDate,
 }
 
+/// 排序方向
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum SortDirection {
     Ascending,

@@ -1,13 +1,17 @@
 use std::cmp::Ordering;
 
+/// 排序管理器
 #[derive(Debug, Default)]
 pub struct SimpleOrderManager;
 
 impl SimpleOrderManager {
+    /// 初始排序值
     const INITIAL_ORDER: f64 = 1000.0;
 
+    /// 排序间隔
     const ORDER_INTERVAL: f64 = 1000.0;
 
+    /// 计算新位置
     pub fn calculate_new_position(
         &self,
         before_order: Option<f64>,
@@ -43,6 +47,7 @@ impl SimpleOrderManager {
         }
     }
 
+    /// 批量重新排序
     pub fn reorder_all(&self, orders: &mut [f64]) {
         orders.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal));
         for (i, order) in orders.iter_mut().enumerate() {
@@ -51,6 +56,7 @@ impl SimpleOrderManager {
     }
 }
 
+/// 可排序 trait
 pub trait Sortable {
     fn id(&self) -> &str;
     fn order(&self) -> f64;
